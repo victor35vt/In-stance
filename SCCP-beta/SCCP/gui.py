@@ -65,12 +65,18 @@ def adjusts():
         notificacao.show()
 
 def infos():
-    os.startfile('saiba_mais.pdf')
+    global OUTPUT_PATH
+    archive = os.path.join(OUTPUT_PATH, r"saiba_mais.pdf")
+    os.startfile(archive)
+    #os.startfile('saiba_mais.pdf')
 
 
 #abre a cartilha completa
 def cartilha_completa():
-    os.startfile('ALONGAMENTO.pdf')
+    global OUTPUT_PATH
+    archive = os.path.join(OUTPUT_PATH, r"ALONGAMENTO.pdf")
+    os.startfile(archive)
+    #os.startfile('ALONGAMENTO.pdf')
 
 
 OUTPUT_PATH = Path(__file__).parent
