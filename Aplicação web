@@ -1,0 +1,160 @@
+from sqlalchemy import String, Integer, Column, create_engine, Float
+from sqlalchemy.orm import declarative_base, Session
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+from collections import defaultdict
+import altair as alt
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "Instance_BD"
+    id = Column('id', Integer, primary_key=True)
+    nome = Column('nome', String(50))
+    inicio = Column('inicio', Float)
+    estado = Column('estado', String(50))
+
+
+db_url = "mysql+pymysql://admin:Laranacompany#2728)&$%#%@in-stance.clzez51mwuu2.us-east-1.rds.amazonaws.com/Instance_BD"
+engine = create_engine(db_url, echo=False)
+
+Base.metadata.create_all(engine)
+
+def obter_nomes():
+    with Session(engine) as session:
+        nomes = session.query(User.nome).distinct().all()
+        nomes = [nome[0] for nome in nomes]
+        return nomes
+
+def obter_dados(nome):
+    with Session(engine) as session:
+        estados_timestamps = session.query(User.estado, User.inicio).filter(
+            User.nome.ilike(nome)).all()
+        return estados_timestamps
+
+def gerar_grafico_individual_com_titulo(nome, estados_timestamps):
+    st.title(f' {nome}')
+
+    if estados_timestamps:
+        gerar_grafico_individual(nome, estados_timestamps)
+        gerar_grafico_pausas(nome, estados_timestamps)
+
+def gerar_grafico_individual(nome, estados_timestamps):
+    ultimo_dia = None
+    tbest = 0
+    teest = 0
+    tnverif = 0
+
+    chart_data = {
+        "Mes/Dia/Ano": [],
+        "Boa postura": [],
+        "Postura inadequada": [],
+        "Não foi possível verificar": []
+    }
+
+    for estado, inicio in estados_timestamps:
+        dia = pd.to_datetime(inicio, unit='s').date()
+
+        if ultimo_dia is None:
+            ultimo_dia = dia
+
+        if dia != ultimo_dia:
+            chart_data["Mes/Dia/Ano"].append(pd.to_datetime(ultimo_dia))
+            chart_data["Boa postura"].append(tbest)
+            chart_data["Postura inadequada"].append(teest)
+            chart_data["Não foi possível verificar"].append(tnverif)
+
+            tbest = 0
+            teest = 0
+            tnverif = 0
+
+        if estado == 'correta':
+            tbest += 1
+        elif estado == 'errada':
+            teest += 1
+        else:
+            tnverif += 1
+
+        ultimo_dia = dia
+
+    # Multiplicar os valores por 157 e dividir por 3600 diretamente nos dados do gráfico
+    df_chart = pd.DataFrame(chart_data)
+    df_chart["Boa postura"] = round((df_chart["Boa postura"] * 95) / 3600, 1)
+    df_chart["Postura inadequada"] = round((df_chart["Postura inadequada"] * 95) / 3600, 1)
+    df_chart["Não foi possível verificar"] = round((df_chart["Não foi possível verificar"] * 95) / 3600, 1)
+
+    # Arredondando para uma casa decimal
+    df_chart = df_chart.round(1)
+    st.markdown('Grafico de como foi a postura do usaurio durante o dia')
+    st.bar_chart(df_chart.set_index("Mes/Dia/Ano"))
+
+
+def gerar_grafico_pausas(nome, estados_timestamps):
+    pausas_esperadas_por_dia = 8  # Defina o número esperado de pausas por dia
+    pausas_por_dia = defaultdict(int)
+
+    for estado, inicio in estados_timestamps:
+        if estado == 'pausa':
+            dia = pd.to_datetime(inicio, unit='s').date()
+            pausas_por_dia[dia] += 1
+
+    # Criar um DataFrame para as porcentagens de diferença por dia
+    df_porcentagens_por_dia = pd.DataFrame({
+        'Data': list(pausas_por_dia.keys()),
+        'Pausas realizadas': [(pausas_por_dia[dia] / pausas_esperadas_por_dia) * 100 for dia in pausas_por_dia.keys()]
+    })
+
+    # Garantir que a porcentagem não seja negativa
+    df_porcentagens_por_dia['Pausas realizadas'] = df_porcentagens_por_dia['Pausas realizadas'].apply(lambda x: max(0, x))
+
+    # Gráfico de barra usando streamlit
+    st.markdown('Grafico de quantas pausas foram realizados no dia dado em porcentagem')
+    st.bar_chart(df_porcentagens_por_dia.set_index('Data'))
+
+def main():
+    st.title('Sistema de Correção e Classificação Postural')
+
+    # Obter todos os nomes disponíveis no banco de dados
+    nomes_disponiveis = obter_nomes()
+
+    # Barra lateral para trocar nomes
+    opcao_selecionada = st.sidebar.selectbox('Selecione uma opção:', ['Individual', 'Grupo', 'Ajuda', 'Todos'])
+
+    if opcao_selecionada == 'Individual':
+        nome_inserido = st.sidebar.selectbox('Selecione um nome:', nomes_disponiveis)
+        if st.sidebar.button('Buscar'):
+            estados_timestamps = obter_dados(nome_inserido)
+            gerar_grafico_individual_com_titulo(nome_inserido, estados_timestamps)
+
+    elif opcao_selecionada == 'Todos':
+        for nome in nomes_disponiveis:
+            estados_timestamps = obter_dados(nome)
+
+            if estados_timestamps:
+                gerar_grafico_individual_com_titulo(nome, estados_timestamps)
+
+    elif opcao_selecionada == 'Grupo':
+        nomes_grupo = st.sidebar.multiselect('Selecione os membros do grupo:', nomes_disponiveis)
+
+        if st.sidebar.button('Buscar Grupo'):
+            for nome in nomes_grupo:
+                estados_timestamps = obter_dados(nome)
+
+                if estados_timestamps:
+                    gerar_grafico_individual_com_titulo(nome, estados_timestamps)
+
+    elif opcao_selecionada == 'Ajuda':
+        st.markdown("O gráfico mostrado tem como intuito apresentar o progresso postural do usuário. A análise desses dados deve ser realizada por um profissional da área, com o objetivo de identificar os riscos que o usuário pode estar enfrentando ao manter uma má postura..")
+        st.markdown("Para uma compreensão melhor, apresentaremos alguns exemplos a seguir, a fim de facilitar a compreensão.")
+        st.markdown("A barra azul claro representa o progresso quando o usuário mantém uma boa postura.")
+        st.markdown("A barra rosa representa o progresso que o usuário teve enquanto estava com uma má postura.")
+        st.markdown("A barra azul escuro indica um período em que não foi possível medir o progresso, podendo ser um intervalo de pausa, algum momento em que não foi possível verificar devido à câmera mal posicionada ou a alguma obstrução visual.")
+        st.markdown("Com o intuito de incluir todos os públicos, caso quem esteja analisando os gráficos seja daltônico ou por algum motivo não consiga distinguir as cores, é possível colocar o cursor do mouse sobre a barra, onde será exibida uma descrição escrita indicando o significado de cada parte.")
+        st.markdown("Representa o dia respectivo das medições")
+        st.markdown("Value= Tempo em que o usuario se manteve com a postura indicada, o valor e dados em horas")
+        st.markdown("Color=Postura indicada")
+        st.markdown("Caso possua mais duvida entre em contato no e-mail instance.oficial@gmail.com")
+
+if __name__ == '__main__':
+    main()
