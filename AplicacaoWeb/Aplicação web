@@ -15,7 +15,6 @@ class User(Base):
     inicio = Column('inicio', Float)
     estado = Column('estado', String(50))
 
-
 db_url = "mysql+pymysql://admin:Laranacompany#2728)&$%#%@in-stance.clzez51mwuu2.us-east-1.rds.amazonaws.com/Instance_BD"
 engine = create_engine(db_url, echo=False)
 
@@ -80,9 +79,9 @@ def gerar_grafico_individual(nome, estados_timestamps):
 
     # Multiplicar os valores por 157 e dividir por 3600 diretamente nos dados do gráfico
     df_chart = pd.DataFrame(chart_data)
-    df_chart["Boa postura"] = round((df_chart["Boa postura"] * 95) / 3600, 1)
-    df_chart["Postura inadequada"] = round((df_chart["Postura inadequada"] * 95) / 3600, 1)
-    df_chart["Não foi possível verificar"] = round((df_chart["Não foi possível verificar"] * 95) / 3600, 1)
+    df_chart["Boa postura"] = round((df_chart["Boa postura"] * 70) / 3600, 1)
+    df_chart["Postura inadequada"] = round((df_chart["Postura inadequada"] * 70) / 3600, 1)
+    df_chart["Não foi possível verificar"] = round((df_chart["Não foi possível verificar"] * 70) / 3600, 1)
 
     # Arredondando para uma casa decimal
     df_chart = df_chart.round(1)
@@ -119,7 +118,7 @@ def main():
     nomes_disponiveis = obter_nomes()
 
     # Barra lateral para trocar nomes
-    opcao_selecionada = st.sidebar.selectbox('Selecione uma opção:', ['Individual', 'Grupo', 'Ajuda', 'Todos'])
+    opcao_selecionada = st.sidebar.selectbox('Selecione uma opção:', ['Individual', 'Grupo', 'Todos', 'Ajuda'])
 
     if opcao_selecionada == 'Individual':
         nome_inserido = st.sidebar.selectbox('Selecione um nome:', nomes_disponiveis)
@@ -145,16 +144,29 @@ def main():
                     gerar_grafico_individual_com_titulo(nome, estados_timestamps)
 
     elif opcao_selecionada == 'Ajuda':
-        st.markdown("O gráfico mostrado tem como intuito apresentar o progresso postural do usuário. A análise desses dados deve ser realizada por um profissional da área, com o objetivo de identificar os riscos que o usuário pode estar enfrentando ao manter uma má postura..")
-        st.markdown("Para uma compreensão melhor, apresentaremos alguns exemplos a seguir, a fim de facilitar a compreensão.")
+        st.title("Ajuda - Como Usar a Aplicação")
+
+        st.header("Como usar a aplicação")
+        st.markdown("Aqui você encontrará informações sobre o uso da aplicação.")
+
+        st.header("Interpretando os Gráficos individuais")
+        st.subheader("Os valores mostrados no gráfico são dados em horas")
         st.markdown("A barra azul claro representa o progresso quando o usuário mantém uma boa postura.")
         st.markdown("A barra rosa representa o progresso que o usuário teve enquanto estava com uma má postura.")
-        st.markdown("A barra azul escuro indica um período em que não foi possível medir o progresso, podendo ser um intervalo de pausa, algum momento em que não foi possível verificar devido à câmera mal posicionada ou a alguma obstrução visual.")
-        st.markdown("Com o intuito de incluir todos os públicos, caso quem esteja analisando os gráficos seja daltônico ou por algum motivo não consiga distinguir as cores, é possível colocar o cursor do mouse sobre a barra, onde será exibida uma descrição escrita indicando o significado de cada parte.")
+        st.markdown(
+            "A barra azul escuro indica um período em que não foi possível medir o progresso, podendo ser um intervalo de pausa, algum momento em que não foi possível verificar devido à câmera mal posicionada ou a alguma obstrução visual.")
+        st.markdown(
+            "Com o intuito de incluir todos os públicos, caso quem esteja analisando os gráficos seja daltônico ou por algum motivo não consiga distinguir as cores, é possível colocar o cursor do mouse sobre a barra, onde será exibida uma descrição escrita indicando o significado de cada parte.")
         st.markdown("Representa o dia respectivo das medições")
-        st.markdown("Value= Tempo em que o usuario se manteve com a postura indicada, o valor e dados em horas")
+        st.markdown("Value= Tempo em que o usuário se manteve com a postura indicada, o valor é dado em horas")
         st.markdown("Color=Postura indicada")
-        st.markdown("Caso possua mais duvida entre em contato no e-mail instance.oficial@gmail.com")
+
+        st.header("Aproveitamento de Pausas")
+        st.markdown(
+            "O segundo gráfico mostra o aproveitamento de pausas dos usuários, na Norma Regulamentadora No. 17 (NR-17) mostra que pessoas que trabalham em frente ao computador devem ter uma pausa de 10 minutos a cada 50 trabalhados. O gráfico mostra o aproveitamento de pausas em porcentagem, sendo possível ultrapassar o valor de 100 caso o usuário tire mais pausas do que deveria. Esse tempo de pausa é primordial para a saúde do usuário, sendo de suma importância para que ele mantenha sua saúde em dia.")
+
+        st.header("Dúvidas e Contato")
+        st.markdown("Caso possua mais dúvida, entre em contato no e-mail instance.oficial@gmail.com")
 
 if __name__ == '__main__':
     main()
